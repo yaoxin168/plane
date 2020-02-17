@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *{
+            margin: 0;
+        }
+
+       
+        #canvas{
+            box-shadow: 0 0 10px #333;
+         
+        }
+        #herocanvas{
+            position: absolute;
+            left: 0;
+            top: 0;
+          
+        }
+     
+        #bulletCanvas{
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        #enemyCanvas{
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+       
+    </style>
+</head>
+<body onload="drawAirplane()">
+    <div>
+    <canvas id="canvas" width="1260" height="550"></canvas>
+    <canvas id="herocanvas" width="1260" height="550"></canvas>
+    <canvas id="bulletCanvas" width="1260" height="550"></canvas>
+    <canvas id="enemyCanvas" width="1260" height="550"></canvas> 
+    
+    </div>
+   
+</body>
+<script src="js/background.js"></script>
+<script src="js/hero.js"></script>
+<script src="js/bullet.js"></script>
+<script src="js/enemy.js"></script>
+<script>
+    function drawAirplane(){
+
+
+        var fenshu = 0;
+
+        var bgCanvas = document.getElementById('canvas');
+        if (bgCanvas.getContext){
+            var bgURL = 'grass.jpg';
+
+            //加载图片的方法
+            loadBackground(bgURL,bgCanvas,moveBackground);
+
+            function moveBackground(bgImage){
+                var bgSound = new Audio('audio/bg.mp3');
+                bgSound.loop = true;
+                bgSound.play();
+
+                setInterval(function(){
+                    //执行速度
+                    var speed = 5;
+                    //执行方法
+                    animateBackground(bgCanvas,bgImage,speed);
+
+                },30);
+
+
+
+                var herocanvas = document.getElementById('herocanvas');
+                var context = herocanvas.getContext('2d');
+
+                var img = 'p2.png';
+
+                var hero = createHero(100,100,herocanvas,img,heroLoaded);
+
+                function heroLoaded(image){
+                    hero.draw(herocanvas);
+                }
+
+                var bulletspeed = 50;
+                var bulletcreatespeed = 200//造子弹速度
+               var mytime = setInterval(function(){
+
+                    
+                    //清除
+                    context.clearRect(0,0,1260,550);
+                    //重绘
+                    hero.draw(herocanvas);
+                   
+                    if(hero.isOutOffScreen(herocanvas)){
+                            //alert('出界了！你的分数为'+fenshu);
+                           // clearInterval(mytime);
+                           hero.x = 500;
+                           hero.y = 400;
+                           
+                        }
+
+                },30);
+
+                //starthero();
+
+                var bCanvas = document.getElementById('bulletCanvas');
+                var bContext = bCanvas.getContext('2d');
+
+                var bWidth = 50;
+                var bHeight = 50;
+
+                var bURL = 'bullet3.png';
+
+                var bulletArray = new Array();
+
+                //创建子弹
+                setInterval(function(){
+                    var bullet = createBullet(bWidth,bHeight,bURL,hero);
+                    bulletArray.push(bullet);//每一次都把子弹放进数组
+                    bullet.draw(bCanvas);
+                    
+                },bulletcreatespeed);
+
+               
+                //子弹飞
+                setInterval(function(){
+                    //清除画布
+                    bContext.clearRect(0,0,1260,550);
+
+                    //
+                    for(var i = 0; i < bulletArray.length;i++){
+                        if(bulletArray[i].isOutOffScreen){
+                            bulletArray[i].splice(i,1);
+                        }
+
+                        bulletArray[i].move();
+                        bulletArray[i].draw(bCanvas);
+
+
+                        
+                        for(var j = 0; j < enemyArray.length; j++){
+                            if(isEnemyHitHero(bulletArray[i],enemyArray[j])){
+                                enemyArray.splice(j,1);
+                                bulletArray.splice(i,1);
+                                fenshu++;
+                            }
+                        }
+                        
+                    }
+
+                    //window.requestAnimationFrame(startbullet);
+
+                },bulletspeed);
+                
+
+
+                var eCanvas = document.getElementById('enemyCanvas');
+                var eContext = eCanvas.getContext('2d');
+
+                var enemyArray = new Array();
+                var createspeed = 850;
+               setInterval(function(){
+                    var number = getRandForNum(1,5);
+                    var enemy;
+                    switch(number){
+                        case 1:
+                            enemy = createEnemy(100,100,'tank2.png',eCanvas);
+                            break;
+                        case 2:
+                            enemy = createEnemy(100,200,'tank3.png',eCanvas);
+                            break;
+                        default:
+                            enemy = createEnemy(50,50,'enemy.png',eCanvas);
+                            break;
+                    }
+
+                    enemyArray.push(enemy);
+                    enemy.draw(eCanvas);
+                    
+                },createspeed);
+
+                setInterval(function(){
+                    if (createspeed >50){
+                        createspeed -= 200;
+                    }
+                    
+                },2000);
+
+                //startenemyCanvas();
+
+
+                //让敌机降落
+                    //清除画布
+                    var eTimer = setInterval(function(){
+                    eContext.clearRect(0,0,eCanvas.width,eCanvas.height)
+
+                    //更新位置
+                    for (var i = 0; i < enemyArray.length;i++){
+                        enemyArray[i].move();
+                        //重绘
+                        enemyArray[i].draw(eCanvas);
+
+                        //碰撞检测
+                        if (isEnemyHitHero(enemyArray[i],hero)){
+                            clearInterval(eTimer);
+                            eTimer = null;
+                            alert('Game Over,你的分数为：'+fenshu);
+                        }
+
+                        //判断敌机是否出屏
+                        if(enemyArray[i].isOutOffScreen(bCanvas)){
+                            enemyArray.splice(i,1);//splic(添加/删除项目的位置，使用负数可从数组结尾处规定位置。要删除的项目数量，如果设置为 0，则不会删除项目。可选，向数组添加的新项目。)
+                        }
+                    }
+                    },50)
+                    
+
+            }
+
+           
+
+
+
+        }
+
+
+    }
+</script>
+</html>
